@@ -61,9 +61,19 @@ async function handleApi(req, res, parsed) {
     const q = query.q || '';
     const kind = query.kind === 'audiobook' ? 'audiobook' : 'ebook';
     if (!q.trim()) return sendJson(res, 400, { error: 'missing q' });
-    const results = await prowlarr.search(q, { kind });
+    let results = await prowlarr.search(q, { kind });
+    let fallback = false;
+    // Translated titles (common for non-English originals) often don't
+    // match on their native-language title at all — if the full query came
+    // up empty and an author was supplied, retry with just the author name
+    // so the user can still find/pick the right book manually.
+    if (!results.length && query.author) {
+      results = await prowlarr.search(query.author, { kind });
+      fallback = true;
+    }
     prowlarr.cacheCandidates(results);
     return sendJson(res, 200, {
+      fallback,
       results: results.map(({ _downloadUrl, _protocol, ...rest }) => rest),
     });
   }

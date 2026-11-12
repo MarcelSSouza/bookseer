@@ -27,6 +27,8 @@ main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
 .kind-toggle { margin: 0.5rem 0 1rem; display: flex; gap: 1rem; }
 .release-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem; border-bottom: 1px solid #333; }
 .release-item button { background: #3d5afe; border: none; color: #fff; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; }
+.spinner { width: 28px; height: 28px; border: 3px solid #333; border-top-color: #3d5afe; border-radius: 50%; margin: 1rem auto; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .req-item { background: #1b1e26; border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; }
 .status { padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem; }
 .status.pending, .status.downloading { background: #5c4a00; color: #ffd166; }

@@ -92,15 +92,22 @@ document.getElementById('modal-close').addEventListener('click', () => {
 document.getElementById('modal-search-releases').addEventListener('click', async () => {
   const book = state.lastSelected;
   const kind = document.querySelector('input[name="kind"]:checked').value;
-  const q = `${book.title} ${(book.authors || [])[0] || ''}`.trim();
+  const author = (book.authors || [])[0] || '';
+  const q = `${book.title} ${author}`.trim();
   const releasesDiv = document.getElementById('releases');
-  releasesDiv.innerHTML = '<p>Buscando versões...</p>';
-  const res = await fetch(`/api/releases?q=${encodeURIComponent(q)}&kind=${kind}`);
+  releasesDiv.innerHTML = '<div class="spinner"></div><p>Buscando versões...</p>';
+  const res = await fetch(`/api/releases?q=${encodeURIComponent(q)}&kind=${kind}&author=${encodeURIComponent(author)}`);
   const data = await res.json();
   releasesDiv.innerHTML = '';
   if (!data.results || !data.results.length) {
-    releasesDiv.innerHTML = '<p>Nenhuma versão encontrada.</p>';
+    releasesDiv.innerHTML = '<p>Nenhuma versão encontrada, nem pelo autor.</p>';
     return;
+  }
+  if (data.fallback) {
+    const note = document.createElement('p');
+    note.className = 'author';
+    note.textContent = `Não achamos pelo título exato (comum quando o livro é catalogado pelo título em inglês) — aqui estão versões de ${author}, escolha manualmente:`;
+    releasesDiv.appendChild(note);
   }
   data.results.slice(0, 20).forEach((r) => {
     const row = document.createElement('div');
