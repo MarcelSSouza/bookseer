@@ -5,7 +5,18 @@ const fs = require('fs');
 const path = require('path');
 
 const LIBRARY_ROOT = process.env.LIBRARY_DIR || '/downloads/books';
-const SAB_COMPLETE_ROOT = process.env.SABNZBD_COMPLETE_DIR || '/downloads/complete/books';
+// SABnzbd reports storage paths as ITS OWN container sees them (e.g.
+// "/downloads/..."); SAB_CONTAINER_ROOT/SAB_LOCAL_ROOT translate that into
+// whatever path this process actually sees the same shared volume at.
+const SAB_CONTAINER_ROOT = process.env.SABNZBD_CONTAINER_DOWNLOADS_ROOT || '/downloads';
+const SAB_LOCAL_ROOT = process.env.SABNZBD_LOCAL_DOWNLOADS_ROOT || '/downloads';
+
+function translateSabPath(sabPath) {
+  if (sabPath.startsWith(SAB_CONTAINER_ROOT)) {
+    return SAB_LOCAL_ROOT + sabPath.slice(SAB_CONTAINER_ROOT.length);
+  }
+  return sabPath;
+}
 
 const EBOOK_EXT = new Set(['.epub', '.mobi', '.azw3', '.azw', '.pdf', '.cbz', '.cbr', '.fb2']);
 const AUDIOBOOK_EXT = new Set(['.m4b', '.mp3', '.m4a', '.flac']);
@@ -50,16 +61,22 @@ function findBestFile(dir, wantAudiobook) {
   return best;
 }
 
-function importCompletedPath(sourcePath, meta) {
-  const resolvedSource = fs.realpathSync(sourcePath);
-  const resolvedCompleteRoot = fs.realpathSync(path.dirname(SAB_COMPLETE_ROOT));
-  const rel = path.relative(resolvedCompleteRoot, resolvedSource);
+function importCompletedPath(sabStoragePath, meta) {
+  const localPath = translateSabPath(sabStoragePath);
+  const resolvedSource = fs.realpathSync(localPath);
+  const resolvedLocalRoot = fs.realpathSync(SAB_LOCAL_ROOT);
+  const rel = path.relative(resolvedLocalRoot, resolvedSource);
   if (rel.startsWith('..') || path.isAbsolute(rel)) {
-    throw new Error('Completed path is outside the configured SABnzbd root');
+    throw new Error('Completed path is outside the configured downloads root');
   }
 
   const wantAudiobook = meta.kind === 'audiobook';
-  const best = findBestFile(resolvedSource, wantAudiobook);
+  // SABnzbd's "storage" can point directly at the final file (single-file
+  // releases) or at a job folder containing it (multi-file releases).
+  const sourceRoot = fs.statSync(resolvedSource).isDirectory()
+    ? resolvedSource
+    : path.dirname(resolvedSource);
+  const best = findBestFile(sourceRoot, wantAudiobook);
   if (!best) throw new Error('No matching ebook/audiobook file found in completed download');
 
   const authorDir = sanitizeName((meta.authors && meta.authors[0]) || 'Unknown Author');
