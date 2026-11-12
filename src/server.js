@@ -219,7 +219,13 @@ const server = http.createServer(async (req, res) => {
     if (!filePath.startsWith(PUBLIC_DIR)) return sendJson(res, 403, { error: 'forbidden' });
     if (!fs.existsSync(filePath)) filePath = path.join(PUBLIC_DIR, 'index.html');
     const ext = path.extname(filePath);
-    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+    const types = {
+      '.html': 'text/html',
+      '.js': 'text/javascript',
+      '.css': 'text/css',
+      '.json': 'application/json',
+      '.png': 'image/png',
+    };
     res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream' });
     fs.createReadStream(filePath).pipe(res);
   } catch (err) {
