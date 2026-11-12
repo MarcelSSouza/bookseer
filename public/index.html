@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BookSeer</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>📚 BookSeer</h1>
+    <nav>
+      <button class="tab active" data-tab="search">Pesquisar</button>
+      <button class="tab" data-tab="requests">Meus Pedidos</button>
+    </nav>
+  </header>
+
+  <main id="search-view">
+    <div class="search-bar">
+      <select id="search-type">
+        <option value="title">Por título</option>
+        <option value="author">Por autor</option>
+      </select>
+      <input id="search-input" type="text" placeholder="Buscar livro ou autor..." />
+      <button id="search-btn">Buscar</button>
+    </div>
+    <div id="results" class="grid"></div>
+  </main>
+
+  <main id="requests-view" class="hidden">
+    <div id="requests-list"></div>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="modal-close">×</button>
+      <h2 id="modal-title"></h2>
+      <div class="kind-toggle">
+        <label><input type="radio" name="kind" value="ebook" checked /> Ebook</label>
+        <label><input type="radio" name="kind" value="audiobook" /> Audiobook</label>
+      </div>
+      <button id="modal-search-releases">Buscar versões disponíveis</button>
+      <div id="releases"></div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

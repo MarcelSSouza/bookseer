@@ -1,0 +1,14 @@
+{
+  "name": "bookseer",
+  "version": "0.1.0",
+  "description": "A Seerr-style request manager for ebooks and audiobooks using Open Library, Prowlarr and SABnzbd.",
+  "license": "GPL-3.0-only",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
