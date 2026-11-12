@@ -8,8 +8,14 @@ const openlibrary = require('./openlibrary');
 const prowlarr = require('./prowlarr');
 const sabnzbd = require('./sabnzbd');
 const torbox = require('./torbox');
+const libgen = require('./libgen');
 const requests = require('./requests');
 const importer = require('./importer');
+
+const libgenCandidates = new Map();
+function cacheLibgenCandidates(list) {
+  for (const c of list) libgenCandidates.set(c.candidateId, c);
+}
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -61,17 +67,36 @@ async function handleApi(req, res, parsed) {
     const q = query.q || '';
     const kind = query.kind === 'audiobook' ? 'audiobook' : 'ebook';
     if (!q.trim()) return sendJson(res, 400, { error: 'missing q' });
-    let results = await prowlarr.search(q, { kind });
+
+    const [prowlarrResults, libgenResults] = await Promise.all([
+      prowlarr.search(q, { kind }).catch((err) => {
+        console.error('prowlarr search failed', err);
+        return [];
+      }),
+      kind === 'ebook'
+        ? libgen.search(q).catch((err) => {
+            console.error('libgen search failed', err);
+            return [];
+          })
+        : Promise.resolve([]),
+    ]);
+
+    let results = [...libgenResults, ...prowlarrResults];
     let fallback = false;
     // Translated titles (common for non-English originals) often don't
     // match on their native-language title at all — if the full query came
     // up empty and an author was supplied, retry with just the author name
     // so the user can still find/pick the right book manually.
     if (!results.length && query.author) {
-      results = await prowlarr.search(query.author, { kind });
+      const [pFallback, lFallback] = await Promise.all([
+        prowlarr.search(query.author, { kind }).catch(() => []),
+        kind === 'ebook' ? libgen.search(query.author).catch(() => []) : Promise.resolve([]),
+      ]);
+      results = [...lFallback, ...pFallback];
       fallback = true;
     }
-    prowlarr.cacheCandidates(results);
+    prowlarr.cacheCandidates(prowlarrResults);
+    cacheLibgenCandidates(results.filter((r) => r.indexer === 'Libgen'));
     return sendJson(res, 200, {
       fallback,
       results: results.map(({ _downloadUrl, _protocol, ...rest }) => rest),
@@ -82,7 +107,9 @@ async function handleApi(req, res, parsed) {
     const body = JSON.parse((await readBody(req)) || '{}');
     const { candidateId, title, authors, kind } = body;
     if (!candidateId) return sendJson(res, 400, { error: 'missing candidateId' });
-    const candidate = prowlarr.getCandidate(candidateId);
+    const candidate = candidateId.startsWith('libgen:')
+      ? libgenCandidates.get(candidateId)
+      : prowlarr.getCandidate(candidateId);
     if (!candidate) return sendJson(res, 404, { error: 'candidate expired, search again' });
 
     const record = requests.create({
@@ -116,7 +143,21 @@ async function handleApi(req, res, parsed) {
 }
 
 async function submitCandidate(record, candidate) {
-  if (candidate.protocol === 'usenet') {
+  if (candidate.protocol === 'direct') {
+    requests.update(record.id, { status: 'downloading', backend: 'libgen' });
+    const downloadUrl = await libgen.resolveDownloadUrl(candidate.editionId);
+    const r = await fetch(downloadUrl, { headers: { 'User-Agent': 'Mozilla/5.0 (BookSeer/0.1)' } });
+    if (!r.ok) throw new Error(`Libgen download failed: ${r.status}`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    const cd = r.headers.get('content-disposition') || '';
+    const nameMatch = cd.match(/filename="?([^";]+)"?/);
+    const ext = nameMatch ? path.extname(nameMatch[1]) : '.epub';
+    const destStaging = path.join('/tmp', `bookseer-${record.id}${ext}`);
+    fs.writeFileSync(destStaging, buf);
+    const finalPath = importer.importCompletedPathFromFile(destStaging, record);
+    fs.unlinkSync(destStaging);
+    requests.update(record.id, { status: 'completed', importedPath: finalPath });
+  } else if (candidate.protocol === 'usenet') {
     const nzbBytes = await prowlarr.fetchNzbBytes(candidate._downloadUrl);
     const nzoId = await sabnzbd.addFile(nzbBytes, `${record.title || 'book'}.nzb`, 'books');
     requests.update(record.id, { status: 'downloading', backend: 'sabnzbd', jobId: nzoId });
