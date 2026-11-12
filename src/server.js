@@ -34,10 +34,11 @@ async function handleApi(req, res, parsed) {
 
   if (pathname === '/api/search' && req.method === 'GET') {
     const q = query.q || '';
+    const language = (query.language || '').trim();
     if (!q.trim()) return sendJson(res, 400, { error: 'missing q' });
-    const results = await openlibrary.searchBooks(q);
+    const results = await openlibrary.searchBooks(q, { language });
     return sendJson(res, 200, {
-      results: results.map((r) => ({ ...r, cover: openlibrary.coverUrl(r.coverId) })),
+      results: results.map((r) => ({ ...r, cover: openlibrary.coverUrl(r.coverId, 'S') })),
     });
   }
 

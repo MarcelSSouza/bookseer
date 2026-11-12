@@ -11,10 +11,14 @@ main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
 .search-bar input { flex: 1; padding: 0.6rem; border-radius: 8px; border: 1px solid #333; background: #1b1e26; color: #eee; }
 .search-bar select, .search-bar button { padding: 0.6rem 1rem; border-radius: 8px; border: 1px solid #333; background: #1b1e26; color: #eee; cursor: pointer; }
 .search-bar button { background: #3d5afe; border: none; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
 .card { background: #1b1e26; border-radius: 10px; padding: 0.75rem; cursor: pointer; transition: transform 0.1s; }
 .card:hover { transform: translateY(-3px); }
-.card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 6px; background: #333; }
+.cover-wrap { aspect-ratio: 2/3; background: #2a2d36; border-radius: 6px; overflow: hidden; }
+.cover { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s ease; background: linear-gradient(110deg, #2a2d36 8%, #343842 18%, #2a2d36 33%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+.cover.loaded { opacity: 1; animation: none; background: none; }
+.cover-placeholder { background: #2a2d36; }
+@keyframes shimmer { to { background-position-x: -200%; } }
 .card .title { font-weight: 600; margin-top: 0.5rem; font-size: 0.9rem; }
 .card .author { color: #999; font-size: 0.8rem; }
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; }
@@ -28,3 +32,24 @@ main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
 .status.pending, .status.downloading { background: #5c4a00; color: #ffd166; }
 .status.completed { background: #0a4d2e; color: #7ee8a2; }
 .status.failed { background: #5c0a0a; color: #ff8a8a; }
+
+@media (max-width: 640px) {
+  header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  nav { width: 100%; }
+  .tab { flex: 1; }
+  main { padding: 1rem 0.75rem; }
+  .search-bar { flex-wrap: wrap; }
+  .search-bar input { flex: 1 1 100%; order: -1; }
+  .search-bar select { flex: 1; min-width: 0; font-size: 0.85rem; padding: 0.6rem 0.4rem; }
+  .search-bar button { flex: 0 0 auto; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.6rem; }
+  .card { padding: 0.5rem; }
+  .card .title { font-size: 0.8rem; }
+  .card .author { font-size: 0.72rem; }
+  .modal { align-items: flex-end; }
+  .modal-content { width: 100%; max-height: 90vh; border-radius: 16px 16px 0 0; }
+  .release-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .release-item button { width: 100%; }
+  .req-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+}
+

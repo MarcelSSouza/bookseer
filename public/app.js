@@ -21,6 +21,7 @@ document.getElementById('search-input').addEventListener('keydown', (e) => {
 async function doSearch() {
   const type = document.getElementById('search-type').value;
   const q = document.getElementById('search-input').value.trim();
+  const language = document.getElementById('search-lang').value;
   if (!q) return;
   const grid = document.getElementById('results');
   grid.innerHTML = '<p>Buscando...</p>';
@@ -41,7 +42,7 @@ async function doSearch() {
       grid.appendChild(card);
     });
   } else {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&language=${encodeURIComponent(language)}`);
     const data = await res.json();
     renderBookGrid(data.results || []);
   }
@@ -69,9 +70,9 @@ function renderBookGrid(books) {
     const card = document.createElement('div');
     card.className = 'card';
     const cover = b.cover
-      ? `<img src="${b.cover}" alt="" />`
-      : `<div style="aspect-ratio:2/3;background:#333;border-radius:6px;"></div>`;
-    card.innerHTML = `${cover}<div class="title">${escapeHtml(b.title)}</div><div class="author">${escapeHtml((b.authors || []).join(', '))}${b.year ? ' · ' + b.year : ''}</div>`;
+      ? `<img src="${b.cover}" alt="" loading="lazy" decoding="async" class="cover" onload="this.classList.add('loaded')" />`
+      : `<div class="cover cover-placeholder"></div>`;
+    card.innerHTML = `<div class="cover-wrap">${cover}</div><div class="title">${escapeHtml(b.title)}</div><div class="author">${escapeHtml((b.authors || []).join(', '))}${b.year ? ' · ' + b.year : ''}</div>`;
     card.addEventListener('click', () => openModal(b));
     grid.appendChild(card);
   });
