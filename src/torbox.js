@@ -5,6 +5,7 @@
 const fs = require('fs');
 
 function apiKey() {
+  if (process.env.TORBOX_API_KEY) return process.env.TORBOX_API_KEY.trim();
   const file = process.env.TORBOX_API_KEY_FILE || '/opt/data/secrets/torbox-api-key';
   return fs.readFileSync(file, 'utf8').trim();
 }
