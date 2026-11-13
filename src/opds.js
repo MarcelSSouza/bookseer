@@ -71,25 +71,25 @@ function listAllBooks() {
   return out;
 }
 
-function feedHeader(base, id, title, selfPath) {
+function feedHeader(base, id, title, selfPath, kind) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:dc="http://purl.org/dc/terms/">
   <id>${escapeXml(id)}</id>
   <title>${escapeXml(title)}</title>
   <updated>${new Date().toISOString()}</updated>
   <author><name>BookSeer</name></author>
-  <link rel="self" href="${base}${selfPath}" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="self" href="${base}${selfPath}" type="application/atom+xml;profile=opds-catalog;kind=${kind}"/>
   <link rel="start" href="${base}/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
 `;
 }
 
-function navEntry(base, title, href, content) {
+function navEntry(base, title, href, content, kind) {
   return `  <entry>
     <title>${escapeXml(title)}</title>
     <id>urn:bookseer:${escapeXml(href)}</id>
     <updated>${new Date().toISOString()}</updated>
     <content type="text">${escapeXml(content || '')}</content>
-    <link rel="subsection" href="${base}${href}" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+    <link rel="subsection" href="${base}${href}" type="application/atom+xml;profile=opds-catalog;kind=${kind}"/>
   </entry>
 `;
 }
@@ -108,31 +108,31 @@ function acquisitionEntry(base, book) {
 }
 
 function rootFeed(base) {
-  let xml = feedHeader(base, 'urn:bookseer:root', 'BookSeer', '/opds');
-  xml += navEntry(base, 'Todos os livros', '/opds/all', 'Todos os livros da biblioteca, por título');
-  xml += navEntry(base, 'Por autor', '/opds/authors', 'Navegar por autor');
+  let xml = feedHeader(base, 'urn:bookseer:root', 'BookSeer', '/opds', 'navigation');
+  xml += navEntry(base, 'Todos os livros', '/opds/all', 'Todos os livros da biblioteca, por título', 'acquisition');
+  xml += navEntry(base, 'Por autor', '/opds/authors', 'Navegar por autor', 'navigation');
   xml += '</feed>\n';
   return xml;
 }
 
 function allBooksFeed(base) {
-  let xml = feedHeader(base, 'urn:bookseer:all', 'Todos os livros', '/opds/all');
+  let xml = feedHeader(base, 'urn:bookseer:all', 'Todos os livros', '/opds/all', 'acquisition');
   for (const book of listAllBooks()) xml += acquisitionEntry(base, book);
   xml += '</feed>\n';
   return xml;
 }
 
 function authorsFeed(base) {
-  let xml = feedHeader(base, 'urn:bookseer:authors', 'Por autor', '/opds/authors');
+  let xml = feedHeader(base, 'urn:bookseer:authors', 'Por autor', '/opds/authors', 'navigation');
   for (const author of listAuthors()) {
-    xml += navEntry(base, author, `/opds/author/${encodeURIComponent(author)}`, '');
+    xml += navEntry(base, author, `/opds/author/${encodeURIComponent(author)}`, '', 'acquisition');
   }
   xml += '</feed>\n';
   return xml;
 }
 
 function authorFeed(base, authorDir) {
-  let xml = feedHeader(base, `urn:bookseer:author:${authorDir}`, authorDir, `/opds/author/${encodeURIComponent(authorDir)}`);
+  let xml = feedHeader(base, `urn:bookseer:author:${authorDir}`, authorDir, `/opds/author/${encodeURIComponent(authorDir)}`, 'acquisition');
   for (const book of listBooksForAuthor(authorDir)) xml += acquisitionEntry(base, { ...book, author: authorDir });
   xml += '</feed>\n';
   return xml;
