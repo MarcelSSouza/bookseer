@@ -2,6 +2,10 @@
 // Minimal OPDS 1.2 (Atom) catalog over the BookSeer library, so e-readers
 // (CrossPoint on Xteink, KOReader, Calibre, etc.) can browse + download
 // already-imported books directly, without going through the web UI.
+//
+// IMPORTANT: every <link href="..."> is an ABSOLUTE URL (scheme+host). Many
+// OPDS clients (CrossPoint included) fail to parse feeds that use relative
+// hrefs, even though bare Atom technically allows them.
 
 const fs = require('fs');
 const path = require('path');
@@ -67,29 +71,30 @@ function listAllBooks() {
   return out;
 }
 
-function feedHeader(id, title, selfHref) {
+function feedHeader(base, id, title, selfPath) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:dc="http://purl.org/dc/terms/">
   <id>${escapeXml(id)}</id>
   <title>${escapeXml(title)}</title>
   <updated>${new Date().toISOString()}</updated>
-  <link rel="self" href="${escapeXml(selfHref)}" type="application/atom+xml;profile=opds-catalog"/>
-  <link rel="start" href="/opds" type="application/atom+xml;profile=opds-catalog"/>
+  <author><name>BookSeer</name></author>
+  <link rel="self" href="${base}${selfPath}" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+  <link rel="start" href="${base}/opds" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
 `;
 }
 
-function navEntry(title, href, content) {
+function navEntry(base, title, href, content) {
   return `  <entry>
     <title>${escapeXml(title)}</title>
     <id>urn:bookseer:${escapeXml(href)}</id>
     <updated>${new Date().toISOString()}</updated>
     <content type="text">${escapeXml(content || '')}</content>
-    <link rel="subsection" href="${escapeXml(href)}" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+    <link rel="subsection" href="${base}${href}" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
   </entry>
 `;
 }
 
-function acquisitionEntry(book) {
+function acquisitionEntry(base, book) {
   const downloadHref = `/opds/file/${book.relPath.split('/').map(encodeURIComponent).join('/')}`;
   return `  <entry>
     <title>${escapeXml(book.title)}</title>
@@ -97,38 +102,38 @@ function acquisitionEntry(book) {
     <author><name>${escapeXml(book.author)}</name></author>
     <updated>${new Date(book.mtime).toISOString()}</updated>
     <content type="text">${escapeXml(book.author)}</content>
-    <link rel="http://opds-spec.org/acquisition" href="${downloadHref}" type="${book.mime}"/>
+    <link rel="http://opds-spec.org/acquisition" href="${base}${downloadHref}" type="${book.mime}"/>
   </entry>
 `;
 }
 
-function rootFeed() {
-  let xml = feedHeader('urn:bookseer:root', 'BookSeer', '/opds');
-  xml += navEntry('Todos os livros', '/opds/all', 'Todos os livros da biblioteca, por título');
-  xml += navEntry('Por autor', '/opds/authors', 'Navegar por autor');
+function rootFeed(base) {
+  let xml = feedHeader(base, 'urn:bookseer:root', 'BookSeer', '/opds');
+  xml += navEntry(base, 'Todos os livros', '/opds/all', 'Todos os livros da biblioteca, por título');
+  xml += navEntry(base, 'Por autor', '/opds/authors', 'Navegar por autor');
   xml += '</feed>\n';
   return xml;
 }
 
-function allBooksFeed() {
-  let xml = feedHeader('urn:bookseer:all', 'Todos os livros', '/opds/all');
-  for (const book of listAllBooks()) xml += acquisitionEntry(book);
+function allBooksFeed(base) {
+  let xml = feedHeader(base, 'urn:bookseer:all', 'Todos os livros', '/opds/all');
+  for (const book of listAllBooks()) xml += acquisitionEntry(base, book);
   xml += '</feed>\n';
   return xml;
 }
 
-function authorsFeed() {
-  let xml = feedHeader('urn:bookseer:authors', 'Por autor', '/opds/authors');
+function authorsFeed(base) {
+  let xml = feedHeader(base, 'urn:bookseer:authors', 'Por autor', '/opds/authors');
   for (const author of listAuthors()) {
-    xml += navEntry(author, `/opds/author/${encodeURIComponent(author)}`, '');
+    xml += navEntry(base, author, `/opds/author/${encodeURIComponent(author)}`, '');
   }
   xml += '</feed>\n';
   return xml;
 }
 
-function authorFeed(authorDir) {
-  let xml = feedHeader(`urn:bookseer:author:${authorDir}`, authorDir, `/opds/author/${encodeURIComponent(authorDir)}`);
-  for (const book of listBooksForAuthor(authorDir)) xml += acquisitionEntry({ ...book, author: authorDir });
+function authorFeed(base, authorDir) {
+  let xml = feedHeader(base, `urn:bookseer:author:${authorDir}`, authorDir, `/opds/author/${encodeURIComponent(authorDir)}`);
+  for (const book of listBooksForAuthor(authorDir)) xml += acquisitionEntry(base, { ...book, author: authorDir });
   xml += '</feed>\n';
   return xml;
 }

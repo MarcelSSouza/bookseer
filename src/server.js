@@ -217,22 +217,25 @@ const server = http.createServer(async (req, res) => {
     }
 
     // --- OPDS catalog (for CrossPoint, KOReader, Calibre, etc.) ---
-    const sendOpds = (xml) => {
-      res.writeHead(200, { 'Content-Type': 'application/atom+xml;charset=utf-8' });
+    const base = `http://${req.headers.host}`;
+    const sendOpds = (xml, kind) => {
+      res.writeHead(200, {
+        'Content-Type': `application/atom+xml;charset=utf-8;profile=opds-catalog;kind=${kind}`,
+      });
       res.end(xml);
     };
     if (parsed.pathname === '/opds' && req.method === 'GET') {
-      return sendOpds(opds.rootFeed());
+      return sendOpds(opds.rootFeed(base), 'navigation');
     }
     if (parsed.pathname === '/opds/all' && req.method === 'GET') {
-      return sendOpds(opds.allBooksFeed());
+      return sendOpds(opds.allBooksFeed(base), 'acquisition');
     }
     if (parsed.pathname === '/opds/authors' && req.method === 'GET') {
-      return sendOpds(opds.authorsFeed());
+      return sendOpds(opds.authorsFeed(base), 'navigation');
     }
     const authorMatch = parsed.pathname.match(/^\/opds\/author\/([^/]+)$/);
     if (authorMatch && req.method === 'GET') {
-      return sendOpds(opds.authorFeed(decodeURIComponent(authorMatch[1])));
+      return sendOpds(opds.authorFeed(base, decodeURIComponent(authorMatch[1])), 'acquisition');
     }
     const fileMatch = parsed.pathname.match(/^\/opds\/file\/(.+)$/);
     if (fileMatch && req.method === 'GET') {
