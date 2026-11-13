@@ -11,6 +11,7 @@ const torbox = require('./torbox');
 const libgen = require('./libgen');
 const requests = require('./requests');
 const importer = require('./importer');
+const opds = require('./opds');
 
 const libgenCandidates = new Map();
 function cacheLibgenCandidates(list) {
@@ -214,6 +215,37 @@ const server = http.createServer(async (req, res) => {
     if (parsed.pathname.startsWith('/api/')) {
       return await handleApi(req, res, parsed);
     }
+
+    // --- OPDS catalog (for CrossPoint, KOReader, Calibre, etc.) ---
+    const sendOpds = (xml) => {
+      res.writeHead(200, { 'Content-Type': 'application/atom+xml;charset=utf-8' });
+      res.end(xml);
+    };
+    if (parsed.pathname === '/opds' && req.method === 'GET') {
+      return sendOpds(opds.rootFeed());
+    }
+    if (parsed.pathname === '/opds/all' && req.method === 'GET') {
+      return sendOpds(opds.allBooksFeed());
+    }
+    if (parsed.pathname === '/opds/authors' && req.method === 'GET') {
+      return sendOpds(opds.authorsFeed());
+    }
+    const authorMatch = parsed.pathname.match(/^\/opds\/author\/([^/]+)$/);
+    if (authorMatch && req.method === 'GET') {
+      return sendOpds(opds.authorFeed(decodeURIComponent(authorMatch[1])));
+    }
+    const fileMatch = parsed.pathname.match(/^\/opds\/file\/(.+)$/);
+    if (fileMatch && req.method === 'GET') {
+      try {
+        const parts = fileMatch[1].split('/').map(decodeURIComponent);
+        const { fullPath, mime } = opds.resolveFile(parts);
+        res.writeHead(200, { 'Content-Type': mime });
+        return fs.createReadStream(fullPath).pipe(res);
+      } catch (err) {
+        return sendJson(res, 404, { error: 'not found' });
+      }
+    }
+
     // static file serving
     let filePath = path.join(PUBLIC_DIR, parsed.pathname === '/' ? 'index.html' : parsed.pathname);
     if (!filePath.startsWith(PUBLIC_DIR)) return sendJson(res, 403, { error: 'forbidden' });
