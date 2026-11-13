@@ -2,7 +2,7 @@
 // SABnzbd client: submit NZB bytes, poll queue/history.
 
 function config() {
-  const base = process.env.SABNZBD_URL || 'http://10.21.0.1:9876';
+  const base = process.env.SABNZBD_URL || 'http://localhost:9876';
   const apiKey = process.env.SABNZBD_API_KEY;
   if (!apiKey) throw new Error('SABNZBD_API_KEY not configured');
   return { base, apiKey };

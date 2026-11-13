@@ -1,0 +1,17 @@
+services:
+  bookseer:
+    build: .
+    # Or use the pre-built image published by GitHub Actions on every tag:
+    # image: ghcr.io/marcelssouza/bookseer:latest
+    container_name: bookseer
+    restart: unless-stopped
+    ports:
+      - "3344:3000"
+    env_file:
+      - .env
+    volumes:
+      # BookSeer's own request-history state
+      - ./data:/data
+      # Shared with your media server / Jellyfin "Books" library.
+      # Mount the SAME host folder here and in Jellyfin.
+      - ./downloads:/downloads

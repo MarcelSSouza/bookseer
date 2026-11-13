@@ -2,11 +2,11 @@
 // Prowlarr client: search releases in the Ebook/Audiobook categories (7000-range)
 // and fetch NZB bytes server-side (never expose Prowlarr URLs/API key to clients).
 
-const EBOOK_CATS = '7020'; // Books/EBook
-const AUDIOBOOK_CATS = '3030'; // Audio/Audiobook
+const EBOOK_CATS = process.env.PROWLARR_EBOOK_CATEGORIES || '7020'; // Books/EBook
+const AUDIOBOOK_CATS = process.env.PROWLARR_AUDIOBOOK_CATEGORIES || '3030'; // Audio/Audiobook
 
 function config() {
-  const base = process.env.PROWLARR_URL || 'http://10.21.0.1:9696';
+  const base = process.env.PROWLARR_URL || 'http://localhost:9696';
   const apiKey = process.env.PROWLARR_API_KEY;
   if (!apiKey) throw new Error('PROWLARR_API_KEY not configured');
   return { base, apiKey };

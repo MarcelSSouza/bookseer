@@ -161,7 +161,8 @@ async function submitCandidate(record, candidate) {
     requests.update(record.id, { status: 'completed', importedPath: finalPath });
   } else if (candidate.protocol === 'usenet') {
     const nzbBytes = await prowlarr.fetchNzbBytes(candidate._downloadUrl);
-    const nzoId = await sabnzbd.addFile(nzbBytes, `${record.title || 'book'}.nzb`, 'books');
+    const category = process.env.SABNZBD_CATEGORY || 'books';
+    const nzoId = await sabnzbd.addFile(nzbBytes, `${record.title || 'book'}.nzb`, category);
     requests.update(record.id, { status: 'downloading', backend: 'sabnzbd', jobId: nzoId });
   } else {
     const torrentId = await torbox.createFromMagnetOrUrl(candidate._downloadUrl);
