@@ -73,6 +73,20 @@
           <label class="kind-pill"><input type="radio" name="kind" value="ebook" checked /><span>📖 Ebook</span></label>
           <label class="kind-pill"><input type="radio" name="kind" value="audiobook" /><span>🎧 Audiobook</span></label>
         </div>
+        <select id="format-filter" class="lang-select" style="width:100%; margin-bottom:0.8rem;">
+          <option value="">📄 Qualquer formato</option>
+          <option value="epub">EPUB</option>
+          <option value="pdf">PDF</option>
+          <option value="mobi">MOBI</option>
+          <option value="azw3">AZW3</option>
+          <option value="txt">TXT</option>
+          <option value="odt">ODT</option>
+          <option value="fb2">FB2</option>
+          <option value="cbz">CBZ</option>
+          <option value="cbr">CBR</option>
+          <option value="doc">DOC/DOCX</option>
+          <option value="rtf">RTF</option>
+        </select>
         <button id="modal-search-releases" class="primary-btn">Buscar versões disponíveis</button>
         <div id="releases"></div>
       </div>

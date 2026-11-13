@@ -130,13 +130,14 @@ document.getElementById('modal-search-releases').addEventListener('click', async
   const trigger = e.currentTarget;
   const book = state.lastSelected;
   const kind = document.querySelector('input[name="kind"]:checked').value;
+  const format = document.getElementById('format-filter').value;
   const author = (book.authors || [])[0] || '';
   const q = `${book.title} ${author}`.trim();
   const releasesDiv = document.getElementById('releases');
   trigger.disabled = true;
   releasesDiv.innerHTML = '<div class="spinner"></div>';
   try {
-    const res = await fetch(`/api/releases?q=${encodeURIComponent(q)}&kind=${kind}&author=${encodeURIComponent(author)}`);
+    const res = await fetch(`/api/releases?q=${encodeURIComponent(q)}&kind=${kind}&author=${encodeURIComponent(author)}&format=${encodeURIComponent(format)}`);
     const data = await res.json();
     releasesDiv.innerHTML = '';
     trigger.disabled = false;
@@ -155,7 +156,8 @@ document.getElementById('modal-search-releases').addEventListener('click', async
       row.className = 'release-item';
       row.style.animationDelay = `${Math.min(i, 12) * 0.03}s`;
       const sizeMb = r.size ? (r.size / 1e6).toFixed(1) + 'MB' : '';
-      row.innerHTML = `<div class="rinfo"><div class="rtitle">${escapeHtml(r.title)}</div><div class="rmeta">${escapeHtml(r.indexer)}${sizeMb ? ' · ' + sizeMb : ''} · ${escapeHtml(r.protocol)}</div></div>`;
+      const fmtTag = r.format ? r.format.toUpperCase() + ' · ' : '';
+      row.innerHTML = `<div class="rinfo"><div class="rtitle">${escapeHtml(r.title)}</div><div class="rmeta">${fmtTag}${escapeHtml(r.indexer)}${sizeMb ? ' · ' + sizeMb : ''} · ${escapeHtml(r.protocol)}</div></div>`;
       const btn = document.createElement('button');
       btn.textContent = 'Pedir';
       btn.addEventListener('click', async () => {

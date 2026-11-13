@@ -12,17 +12,24 @@ function config() {
   return { base, apiKey };
 }
 
-async function search(query, { kind = 'ebook' } = {}) {
+const KNOWN_FORMATS = ['epub', 'mobi', 'azw3', 'azw', 'pdf', 'txt', 'odt', 'fb2', 'cbz', 'cbr', 'doc', 'docx', 'rtf', 'm4b', 'mp3', 'flac'];
+function guessFormat(title) {
+  const m = String(title || '').match(/\b(epub|mobi|azw3|azw|pdf|txt|odt|fb2|cbz|cbr|docx?|rtf|m4b|mp3|flac)\b/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
+async function search(query, { kind = 'ebook', format } = {}) {
   const { base, apiKey } = config();
   const cats = kind === 'audiobook' ? AUDIOBOOK_CATS : EBOOK_CATS;
   const url = `${base}/api/v1/search?query=${encodeURIComponent(query)}&type=search&categories=${cats}`;
   const res = await fetch(url, { headers: { 'X-Api-Key': apiKey } });
   if (!res.ok) throw new Error(`Prowlarr search failed: ${res.status}`);
   const results = await res.json();
-  return results.map((r, i) => ({
+  let mapped = results.map((r, i) => ({
     candidateId: `${r.indexerId}:${i}:${Buffer.from(r.guid || r.downloadUrl || '').toString('base64').slice(0, 40)}`,
     title: r.title,
     size: r.size,
+    format: guessFormat(r.title),
     indexer: r.indexer,
     protocol: r.protocol,
     seeders: r.seeders ?? null,
@@ -30,6 +37,10 @@ async function search(query, { kind = 'ebook' } = {}) {
     _downloadUrl: r.downloadUrl || r.guid,
     _protocol: r.protocol,
   }));
+  if (format) {
+    mapped = mapped.filter((r) => r.format === format.toLowerCase());
+  }
+  return mapped;
 }
 
 // Cache raw candidates server-side so the client never sees real download URLs.

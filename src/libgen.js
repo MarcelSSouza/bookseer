@@ -7,19 +7,40 @@ const BASE = process.env.LIBGEN_BASE || 'https://libgen.li';
 const UA = { 'User-Agent': 'Mozilla/5.0 (BookSeer/0.1 self-hosted)' };
 
 function extractEditions(html) {
-  // Rows look like: <a data-toggle="tooltip" ... title="..." href="edition.php?id=1234">Title <i></i></a>
-  // The href attribute is NOT first on the tag, so match it anywhere inside
-  // an <a ...> and grab the plain text right after the closing '>'.
+  // Each book is one <tr>...</tr> row. Column order (libgen.li):
+  // title/author-link, author, publisher, year, language, pages, size, format, mirrors.
+  // We pull the editionId+title from the title link, and the format from the
+  // <td> right before the mirrors cell (the one containing ads.php links).
   const results = [];
-  const re = /href="edition\.php\?id=(\d+)">([^<]+)/g;
-  let m;
   const seen = new Set();
-  while ((m = re.exec(html))) {
-    const id = m[1];
-    const title = decodeEntities(m[2]);
+  const trRe = /<tr>([\s\S]*?)<\/tr>/g;
+  let trMatch;
+  while ((trMatch = trRe.exec(html))) {
+    const row = trMatch[1];
+    const titleMatch = row.match(/href="edition\.php\?id=(\d+)">([^<]+)/);
+    if (!titleMatch) continue;
+    const id = titleMatch[1];
+    const title = decodeEntities(titleMatch[2]);
     if (seen.has(id) || !title) continue;
+
+    // Format: a bare <td>word</td> immediately followed by the mirrors cell,
+    // whose very first link goes to ads.php. Must NOT lazily skip across
+    // other <td> cells (e.g. pages, size) to find a later ads.php link.
+    const formatMatch = row.match(/<td>([a-zA-Z0-9]{2,6})<\/td>\s*<td>\s*<nobr>\s*<a[^>]*href="\/?ads\.php/);
+    const format = formatMatch ? formatMatch[1].toLowerCase() : null;
+
+    // Size: the mirrors-adjacent size cell looks like <a href="/file.php?...">10 MB</a>
+    const sizeMatch = row.match(/>([\d.]+)\s*(KB|MB|GB)<\/a>/i);
+    let sizeBytes = null;
+    if (sizeMatch) {
+      const n = parseFloat(sizeMatch[1]);
+      const unit = sizeMatch[2].toUpperCase();
+      const mult = unit === 'GB' ? 1e9 : unit === 'MB' ? 1e6 : 1e3;
+      sizeBytes = Math.round(n * mult);
+    }
+
     seen.add(id);
-    results.push({ editionId: id, title });
+    results.push({ editionId: id, title, format, sizeBytes });
   }
   return results;
 }
@@ -34,16 +55,21 @@ function decodeEntities(s) {
     .trim();
 }
 
-async function search(query) {
+async function search(query, { format } = {}) {
   const url = `${BASE}/index.php?req=${encodeURIComponent(query)}`;
   const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`Libgen search failed: ${res.status}`);
   const html = await res.text();
-  return extractEditions(html).map((e) => ({
+  let editions = extractEditions(html);
+  if (format) {
+    editions = editions.filter((e) => e.format === format.toLowerCase());
+  }
+  return editions.map((e) => ({
     candidateId: `libgen:${e.editionId}`,
     editionId: e.editionId,
     title: e.title,
-    size: null,
+    size: e.sizeBytes,
+    format: e.format,
     indexer: 'Libgen',
     protocol: 'direct',
     seeders: null,

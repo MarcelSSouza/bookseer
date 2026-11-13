@@ -67,15 +67,16 @@ async function handleApi(req, res, parsed) {
   if (pathname === '/api/releases' && req.method === 'GET') {
     const q = query.q || '';
     const kind = query.kind === 'audiobook' ? 'audiobook' : 'ebook';
+    const format = (query.format || '').trim();
     if (!q.trim()) return sendJson(res, 400, { error: 'missing q' });
 
     const [prowlarrResults, libgenResults] = await Promise.all([
-      prowlarr.search(q, { kind }).catch((err) => {
+      prowlarr.search(q, { kind, format }).catch((err) => {
         console.error('prowlarr search failed', err);
         return [];
       }),
       kind === 'ebook'
-        ? libgen.search(q).catch((err) => {
+        ? libgen.search(q, { format }).catch((err) => {
             console.error('libgen search failed', err);
             return [];
           })
@@ -90,8 +91,8 @@ async function handleApi(req, res, parsed) {
     // so the user can still find/pick the right book manually.
     if (!results.length && query.author) {
       const [pFallback, lFallback] = await Promise.all([
-        prowlarr.search(query.author, { kind }).catch(() => []),
-        kind === 'ebook' ? libgen.search(query.author).catch(() => []) : Promise.resolve([]),
+        prowlarr.search(query.author, { kind, format }).catch(() => []),
+        kind === 'ebook' ? libgen.search(query.author, { format }).catch(() => []) : Promise.resolve([]),
       ]);
       results = [...lFallback, ...pFallback];
       fallback = true;
